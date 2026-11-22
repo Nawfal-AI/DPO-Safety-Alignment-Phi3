@@ -1,135 +1,110 @@
-# 🧠 DPO-Safety-Alignment-Phi3
+# DPO-Safety-Alignment-Phi3
 
-<<<<<<< Updated upstream
-> **DPO + QLoRA safety alignment of Phi-3-mini, end-to-end on a single 16GB T4 GPU**
-=======
-![Kaggle](https://img.shields.io/badge/Kaggle-T4_GPU-blue)
-
-
-## 🎯 Why This Project Exists
-This repository is a **simulated Production Post-Training pipeline**, specifically architected to mirror the requirements of **Anthropic's Production Model Post-Training** role.
-
-It demonstrates a deep understanding of:
-- **Constitutional AI / RLHF** (via DPO on the PKU-SafeRLHF dataset)
-- **High-Performance Computing** (4-bit QLoRA, Flash Attention, Gradient Checkpointing)
-- **Distributed Simulation** (Gradient Accumulation simulating global batch sizes across multiple nodes)
-- **On-Call Incident Response** (Custom Callback that pauses training on NaN/Loss spikes)
-- **Production Observability** (Full WandB instrumentation with gradient norms and KL-divergence)
-
-## 📂 Repository Structure
-
-    ├── train.py # Main DPO training with safety alignment
-    ├── evaluate.py # Toxicity & Reasoning evaluation harness
-    └── requirements.txt # Exact dependencies for Kaggle T4 environment
-
-
-## 🧠 How It Simulates the "Missing Skills" (For Recruiters)
-| Anthropic JD Requirement | Implementation in this Code |
-| :--- | :--- |
-| *Distributed Systems / Multi-GPU* | Simulated via `gradient_accumulation_steps=8` to replicate a batch size across 8 virtual nodes. |
-| *High-Performance Computing* | Leveraged `bitsandbytes` 4-bit quantization and `flash_attention_2` to fit a 3.8B model into 16GB VRAM. |
-| *Debugging complex issues* | The `ProductionIncidentCallback` acts as an on-call engineer, automatically halting and checkpointing on NaNs. |
-| *Constitutional AI / Safety* | Trained DPO to choose "safe" responses over "harmful" ones using the PKU-SafeRLHF dataset. |
-| *Data Curation* | Included a `DataValidator` class to filter empty/short samples, mirroring my EagleSFT pipeline. |
-
-## 🚀 How to Run on Kaggle
-1. **Create a Kaggle Notebook** with GPU T4x2 accelerator enabled.
-2. **Clone this repo** into the `/kaggle/working/` directory.
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-
-4. Train the model:
-    python train.py --wandb_key YOUR_KEY --sample_size 5000
-
-5. Evaluate safety:
-    python evaluate.py
-
-## Expected Results
-Toxicity Drop: The aligned model should show a significant decrease in toxicity scores (e.g., from 0.8 to 0.2) on harmful prompts.
-
-Reasoning Retention: The aligned model should still produce coherent completions (proving safety didn't break intelligence).
->>>>>>> Stashed changes
-
-A reproducible safety fine-tuning pipeline for Phi-3-mini using Direct Preference Optimisation (DPO) with QLoRA, including training health monitoring, data validation, and a toxicity/reasoning evaluation harness — all runnable on free-tier Colab hardware.
+A reproducible safety fine-tuning pipeline for Phi-3-mini using Direct Preference Optimisation (DPO) with QLoRA, including training health monitoring, data validation, and a toxicity/reasoning evaluation harness — all runnable on a single free-tier 16GB T4 GPU (Kaggle or Colab).
 
 ---
 
-## ✨ What this demonstrates
+## What this demonstrates
 
-- **DPO from scratch** — preference dataset construction, reward-free alignment without RLHF
-- **QLoRA efficiency** — 4-bit quantisation + LoRA adapters, fits in 16GB VRAM
-- **Training observability** — loss curves, gradient norms, learning-rate schedule logged to W&B
-- **Eval harness** — toxicity scoring (Perspective API / local classifier) + reasoning benchmarks before/after
+- **DPO from scratch** — preference dataset construction, reward-free alignment without a separate reward model
+- **QLoRA efficiency** — 4-bit quantisation + LoRA adapters, fits a 3.8B model into 16GB VRAM
+- **Training health monitoring** — custom callback that halts and checkpoints automatically on NaN/loss spikes
+- **Data validation** — `DataValidator` class filters malformed and short samples before training
+- **Eval harness** — toxicity scoring + reasoning benchmarks before and after alignment
+- **Honest debugging log** — `NOTES.md` documents six real, unplanned failures (dataset schema changes, library API breaks, import shadowing) and how each was fixed
 
 ---
 
-## 📊 Results (summary)
+## Results summary
 
 | Metric | Base Phi-3-mini | After DPO |
 |---|---|---|
-| Toxicity rate (%) | ~4.2 | ~0.9 |
-| Helpfulness (human eval) | baseline | +12% |
+| Toxicity rate (mean) | 0.00326 | 0.000186 |
+| Reward accuracy (chosen vs rejected) | — | 0.579 |
 | MMLU accuracy | 68.1 | 67.8 |
 
-> Full training logs and W&B report linked in the notebook.
+Training time: 5h 03m on a single Kaggle T4. Full numbers and honest commentary in [RESULTS.md](RESULTS.md).
 
 ---
 
-## 🚀 Quick start
+## Repository structure
+
+```
+DPO-Safety-Alignment-Phi3/
+├── train.py              — DPO training with QLoRA, health monitoring, data validation
+├── eval_harness.py       — Toxicity + reasoning evaluation before/after alignment
+├── requirements.txt      — Exact dependencies for Kaggle/Colab T4 environment
+├── RESULTS.md            — Full training metrics, eval results, and honest limitations
+├── NOTES.md              — Design decisions, what broke, and how it was debugged
+└── results/
+    └── eval_results.json — Raw evaluation output
+```
+
+---
+
+## Quick start (Kaggle or Colab with T4 GPU)
 
 ```bash
 git clone https://github.com/Nawfal-AI/DPO-Safety-Alignment-Phi3
 cd DPO-Safety-Alignment-Phi3
 pip install -r requirements.txt
 
-# 1. Build the preference dataset
-python scripts/build_dataset.py
+# 1. Run DPO training (requires 16GB GPU, ~5 hours on T4)
+python train.py
 
-# 2. Run DPO training (requires 16GB GPU)
-python train_dpo.py --config configs/phi3_qlora.yaml
-
-# 3. Evaluate
-python eval/run_eval.py --model outputs/phi3-dpo
+# 2. Evaluate toxicity + reasoning
+python eval_harness.py
 ```
 
-Or open `notebooks/DPO_Training_Walkthrough.ipynb` in Google Colab.
+On Kaggle: create a notebook with GPU T4 accelerator, clone the repo into `/kaggle/working/`, and run the two commands above.
 
 ---
 
-## 🏗️ Pipeline
+## Pipeline
 
 ```
-Raw preference pairs (chosen / rejected)
+PKU-SafeRLHF preference pairs (chosen / rejected)
     │
     ▼
-Data validation + quality filtering
+DataValidator (filter empty / too-short samples)
     │
     ▼
-QLoRA adapter init (4-bit Phi-3-mini)
+4-bit QLoRA adapter init (Phi-3-mini-4k-instruct)
     │
     ▼
 DPO training loop
-├── Health monitoring (loss, grad norm)
-└── W&B logging
+    ├── TrainingHealthCallback (halt + checkpoint on NaN/spike)
+    └── W&B logging (loss, grad norm, reward margin)
     │
     ▼
 Merged checkpoint
     │
     ▼
-Eval harness
-├── Toxicity classifier
-└── Reasoning benchmarks
+eval_harness.py
+    ├── Toxicity classifier (5-prompt red-team set)
+    └── Reasoning sanity check (logic + language prompts)
 ```
 
 ---
 
-## 🔧 Stack
+## Stack
 
 `PyTorch` · `Transformers` · `PEFT` · `TRL` · `bitsandbytes` · `Weights & Biases`
 
 ---
 
-## 📄 License
+## Engineering notes
+
+[NOTES.md](NOTES.md) covers the design decisions (why DPO not PPO, why 4-bit QLoRA, why this sample size) and six real failures hit during development — dataset schema changes, torch runtime corruption, a `trl` API break, and a self-shadowing import — with the fix for each. Worth reading if you want to understand how the project was actually built.
+
+---
+
+## Honest limitations
+
+This demonstrates a working DPO/QLoRA pipeline, correct preference-label handling, and a real (if small) shift toward safer responses on a safety-tuned base model. It does not demonstrate distributed systems experience (single GPU throughout) or robustness against adversarial jailbreak prompts — the eval set is five direct requests, not a red-team suite. See `RESULTS.md` for the full honest take.
+
+---
+
+## License
 
 MIT

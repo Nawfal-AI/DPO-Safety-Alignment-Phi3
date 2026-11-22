@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.DS_Store
+.venv/
+venv/
+
+# Model outputs and checkpoints (too large for git)
+outputs/
+checkpoints/
+*.pt
+*.bin
+*.safetensors
+wandb/
+
+# Backup zips — keep only source code in git
+results/*.zip
+results/full_project_backup.zip
+results/production_model_adapter.zip
+
+# Notebook checkpoints
+.ipynb_checkpoints/
